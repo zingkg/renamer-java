@@ -4,7 +4,7 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 version = '1.0'
 if (!hasProperty('mainClass')) {
-    ext.mainClass = 'renamer.RenamerUI'
+    ext.mainClass = 'com.zingkg.renamer.RenamerUI'
 }
 
 jar {

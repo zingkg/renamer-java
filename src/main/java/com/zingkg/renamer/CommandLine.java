@@ -1,4 +1,4 @@
-package renamer;
+package com.zingkg.renamer;
 
 import java.io.File;
 import java.util.Arrays;
