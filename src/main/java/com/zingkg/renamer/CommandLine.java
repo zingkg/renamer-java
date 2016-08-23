@@ -57,8 +57,8 @@ public class CommandLine {
             '\t' + FileUtilities.RENAME_COMMAND + "\tReplaces a string in the file with another"
         );
         System.out.println(
-            '\t' + FileUtilities.WIPE_RENAME_NUMBER_COMMAND + "\tWipes the file's name and " +
-            "uses the input name and numbers the files starting at 1"
+            '\t' + FileUtilities.WIPE_RENAME_NUMBER_COMMAND + "\tWipes the file's name, uses " + 
+            "the input name, and numbers the files starting at 1"
         );
         System.out.println();
 
