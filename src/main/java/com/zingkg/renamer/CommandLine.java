@@ -2,8 +2,9 @@ package com.zingkg.renamer;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Main class for running the program as a command line application.
@@ -47,6 +48,9 @@ public class CommandLine {
         }
     }
 
+    /**
+     * Prints help to be displayed on the command line.
+     */
     private static void printHelp() {
         System.out.println("usage: renamer command <args> <files>");
         System.out.println("Commands are:");
@@ -93,10 +97,22 @@ public class CommandLine {
         );
     }
 
+    /**
+     * Gets the input string.
+     *
+     * @param args The command line arguments array.
+     * @return The input string on the arguments.
+     */
     private static String getInputString(String[] args) {
         return args[1];
     }
 
+    /**
+     * Gets the starting number part of the command line arguments.
+     *
+     * @param args The command line arguments array.
+     * @return The starting number in the arguments.
+     */
     private static int getStartingNumber(String[] args) {
         return Integer.parseInt(args[2]);
     }
@@ -110,8 +126,11 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(3, args);
-        FileUtilities.renameFiles(files, FileUtilities.renameReplace(args[1], args[2], files));
+        List<String> files = getFiles(3, args).collect(Collectors.toList());
+        FileUtilities.renameFiles(
+            files.stream(),
+            FileUtilities.renameReplace(args[1], args[2], files.stream())
+        );
         return SUCCESS;
     }
 
@@ -124,9 +143,12 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(2, args);
-        List<File> newFiles = FileUtilities.wipeRenameAndNumber(getInputString(args), files);
-        FileUtilities.renameFiles(files, newFiles);
+        List<String> files = getFiles(2, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.wipeRenameAndNumber(
+            getInputString(args),
+            files.stream()
+        );
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -139,13 +161,13 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(3, args);
-        List<File> newFiles = FileUtilities.numberPrepend(
+        List<String> files = getFiles(3, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.numberPrepend(
             getInputString(args),
             getStartingNumber(args),
-            files
+            files.stream()
         );
-        FileUtilities.renameFiles(files, newFiles);
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -158,13 +180,13 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(3, args);
-        List<File> newFiles = FileUtilities.numberAppend(
+        List<String> files = getFiles(3, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.numberAppend(
             getInputString(args),
             getStartingNumber(args),
-            files
+            files.stream()
         );
-        FileUtilities.renameFiles(files, newFiles);
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -178,13 +200,13 @@ public class CommandLine {
         }
 
         final int startNum = Integer.parseInt(args[2]);
-        List<String> files = getFiles(3, args);
-        List<File> newFiles = FileUtilities.deletePrecedingAndNumberPrepend(
+        List<String> files = getFiles(3, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.deletePrecedingAndNumberPrepend(
             getInputString(args),
             startNum,
-            files
+            files.stream()
         );
-        FileUtilities.renameFiles(files, newFiles);
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -198,13 +220,13 @@ public class CommandLine {
         }
 
         final int startNum = Integer.parseInt(args[2]);
-        List<String> files = getFiles(3, args);
-        List<File> newFiles = FileUtilities.deleteEndingAndNumberAppend(
+        List<String> files = getFiles(3, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.deleteEndingAndNumberAppend(
             getInputString(args),
             startNum,
-            files
+            files.stream()
         );
-        FileUtilities.renameFiles(files, newFiles);
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -217,9 +239,9 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(2, args);
-        List<File> newFiles = FileUtilities.prependString(getInputString(args), files);
-        FileUtilities.renameFiles(files, newFiles);
+        List<String> files = getFiles(2, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.prependString(getInputString(args), files.stream());
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -232,9 +254,9 @@ public class CommandLine {
             return ERROR;
         }
 
-        List<String> files = getFiles(2, args);
-        List<File> newFiles = FileUtilities.appendString(getInputString(args), files);
-        FileUtilities.renameFiles(files, newFiles);
+        List<String> files = getFiles(2, args).collect(Collectors.toList());
+        Stream<File> newFiles = FileUtilities.appendString(getInputString(args), files.stream());
+        FileUtilities.renameFiles(files.stream(), newFiles);
         return SUCCESS;
     }
 
@@ -247,9 +269,7 @@ public class CommandLine {
      *     The arguments in the command line.
      * @return A list with all of the files extracted from the command line.
      */
-    private static List<String> getFiles(final int start, String[] args) {
-        List<String> files = new LinkedList<>();
-        files.addAll(start, Arrays.asList(args));
-        return files;
+    private static Stream<String> getFiles(final int start, String[] args) {
+        return Arrays.stream(args, start, args.length);
     }
 }

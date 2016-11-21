@@ -2,12 +2,14 @@ package com.zingkg.renamer;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.swing.JFileChooser;
 import javax.swing.table.DefaultTableModel;
 
-public final class RenamerUI extends javax.swing.JFrame
-{
+public final class RenamerUI extends javax.swing.JFrame {
     private List<File> currentFiles;
 
     /**
@@ -39,12 +41,7 @@ public final class RenamerUI extends javax.swing.JFrame
             //</editor-fold>
 
             // Create and display the form
-            java.awt.EventQueue.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    new RenamerUI().setVisible(true);
-                }
-            });
+            java.awt.EventQueue.invokeLater(() -> new RenamerUI().setVisible(true));
         }
     }
 
@@ -61,6 +58,7 @@ public final class RenamerUI extends javax.swing.JFrame
         jTabbedPane1 = new javax.swing.JTabbedPane();
         renameNumberButtonGroup = new javax.swing.ButtonGroup();
         prefixSuffixButtonGroup = new javax.swing.ButtonGroup();
+        prefixSuffixNumberButtonGroup = new javax.swing.ButtonGroup();
         jSplitPane1 = new javax.swing.JSplitPane();
         jScrollPane3 = new javax.swing.JScrollPane();
         filePreviewTable = new javax.swing.JTable();
@@ -272,16 +270,27 @@ public final class RenamerUI extends javax.swing.JFrame
         renameTabs.addTab("Rename", jPanel1);
 
         prefixSuffixButtonGroup.add(prefixRadioButton);
+        prefixRadioButton.setSelected(true);
         prefixRadioButton.setText("Prefix");
 
         prefixSuffixButtonGroup.add(suffixRadioButton);
         suffixRadioButton.setText("Suffix");
 
         prefixSuffixNumberCheckBox.setText("Number");
+        prefixSuffixNumberCheckBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                prefixSuffixNumberCheckBoxActionPerformed(evt);
+            }
+        });
 
+        prefixSuffixNumberButtonGroup.add(prefixSuffixAscendingRadioButton);
+        prefixSuffixAscendingRadioButton.setSelected(true);
         prefixSuffixAscendingRadioButton.setText("Ascending");
+        prefixSuffixAscendingRadioButton.setEnabled(false);
 
+        prefixSuffixNumberButtonGroup.add(prefixSuffixDescendingRadioButton);
         prefixSuffixDescendingRadioButton.setText("Descending");
+        prefixSuffixDescendingRadioButton.setEnabled(false);
 
         fileNumberStartNumberLabel.setText("Start Number");
 
@@ -404,63 +413,126 @@ public final class RenamerUI extends javax.swing.JFrame
         c.setMultiSelectionEnabled(true);
         final int rVal = c.showOpenDialog(RenamerUI.this);
         if (rVal == JFileChooser.APPROVE_OPTION) {
-            final File[] files = c.getSelectedFiles();
-            currentFiles = new ArrayList<>();
-            for (final File iFile : files) {
-                final String filePath = iFile.getPath();
-                currentFiles.add(iFile);
-                ((DefaultTableModel) loadedFileTable.getModel()).addRow(new Object[]{iFile.getName(), filePath});
-            }
+            currentFiles = Arrays.asList(c.getSelectedFiles());
+            currentFiles.forEach(file -> {
+                final String filePath = file.getPath();
+                ((DefaultTableModel) loadedFileTable.getModel()).addRow(
+                    new Object[]{file.getName(), filePath}
+                );
+            });
         }
     }//GEN-LAST:event_filesOpenButtonActionPerformed
 
     private void filesClearButtonActionPerformed(final java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filesClearButtonActionPerformed
         currentFiles = new ArrayList<>();
+        eraseFileTables();
+    }//GEN-LAST:event_filesClearButtonActionPerformed
+
+    private void eraseFileTables() {
         eraseTable(loadedFileTable);
         eraseTable(previewFileTable);
-    }//GEN-LAST:event_filesClearButtonActionPerformed
+    }
 
     private void previewButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_previewButtonActionPerformed
         eraseTable(previewFileTable);
 
-        List<String> filePaths = getFilePathList();
-        List<File> previewFiles = runFileOperation(filePaths);
-        for (File iPreviewFile : previewFiles) {
-            final String fileName = iPreviewFile.getName();
-            final String filePath = iPreviewFile.getAbsolutePath();
-            ((DefaultTableModel) previewFileTable.getModel()).addRow(new Object[]{fileName, filePath});
-        }
+        Stream<String> filePaths = getFilePathList();
+        runFileOperation(filePaths).map(file -> {
+            final String fileName = file.getName();
+            final String filePath = file.getAbsolutePath();
+            return new Object[]{fileName, filePath};
+        }).forEach(((DefaultTableModel) previewFileTable.getModel())::addRow);
     }//GEN-LAST:event_previewButtonActionPerformed
 
     private void renameButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_renameButtonActionPerformed
-        List<String> filePaths = getFilePathList();
-        List<File> previewFiles = runFileOperation(filePaths);
-        FileUtilities.renameFiles(filePaths, previewFiles);
+        List<String> filePaths = getFilePathList().collect(Collectors.toList());
+        Stream<File> previewFiles = runFileOperation(filePaths.stream());
+        FileUtilities.renameFiles(filePaths.stream(), previewFiles);
+        eraseFileTables();
     }//GEN-LAST:event_renameButtonActionPerformed
 
-    private List<File> runFileOperation(List<String> filePaths) {
+    private void prefixSuffixNumberCheckBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_prefixSuffixNumberCheckBoxActionPerformed
+        if (prefixSuffixNumberCheckBox.isSelected())
+            setEnabledStatusOnPrefixSuffixRadioButtons(true);
+        else
+            setEnabledStatusOnPrefixSuffixRadioButtons(false);
+    }//GEN-LAST:event_prefixSuffixNumberCheckBoxActionPerformed
+
+    private void setEnabledStatusOnPrefixSuffixRadioButtons(boolean status) {
+        prefixSuffixAscendingRadioButton.setEnabled(status);
+        prefixSuffixDescendingRadioButton.setEnabled(status);
+    }
+
+    private Stream<File> runFileOperation(Stream<String> filePaths) {
         if (renameTabs.getSelectedIndex() == 0) {
             // First tab is rename.
-            if (renameAscendingRadioButton.isSelected())
-                return FileUtilities.renameAppendAsc(fileRenameTextField.getText(), (Integer) renameTabStartingNumber.getValue(), filePaths);
-            else if (renameDescendingRadioButton.isSelected())
-                return FileUtilities.renameAppendDesc(fileRenameTextField.getText(), (Integer) renameTabStartingNumber.getValue(), filePaths);
+            if (renameAscendingRadioButton.isSelected()) {
+                return FileUtilities.renameAppendAsc(
+                    fileRenameTextField.getText(),
+                    (Integer) renameTabStartingNumber.getValue(),
+                    filePaths
+                );
+            } else if (renameDescendingRadioButton.isSelected()) {
+                return FileUtilities.renameAppendDesc(
+                    fileRenameTextField.getText(),
+                    (Integer) renameTabStartingNumber.getValue(),
+                    filePaths
+                );
+            }
         } else if (renameTabs.getSelectedIndex() == 1) {
-            // Second tab is prefix, suffix.
+            if (prefixRadioButton.isSelected() && !prefixSuffixNumberCheckBox.isSelected()) {
+                return FileUtilities.prependString(
+                    fileNumberInputStringTextField.getText(),
+                    filePaths
+                );
+            } else if (suffixRadioButton.isSelected() && !prefixSuffixNumberCheckBox.isSelected()) {
+                return FileUtilities.appendString(
+                    fileNumberInputStringTextField.getText(),
+                    filePaths
+                );
+            } else if (
+                prefixRadioButton.isSelected() &&
+                prefixSuffixAscendingRadioButton.isSelected()
+            ) {
+                return FileUtilities.numberPrepend(
+                    fileNumberInputStringTextField.getText(),
+                    Integer.parseInt(fileNumberStartNumberTextField.getText()),
+                    filePaths
+                );
+            } else if (
+                suffixRadioButton.isSelected() &&
+                prefixSuffixAscendingRadioButton.isSelected()
+            ) {
+                return FileUtilities.numberAppend(
+                        fileNumberInputStringTextField.getText(),
+                        Integer.parseInt(fileNumberStartNumberTextField.getText()),
+                        filePaths
+                );
+            } else if (
+                prefixRadioButton.isSelected() &&
+                prefixSuffixDescendingRadioButton.isSelected()
+            ) {
+                return FileUtilities.numberPrependDesc(
+                    fileNumberInputStringTextField.getText(),
+                    Integer.parseInt(fileNumberStartNumberTextField.getText()),
+                    filePaths
+                );
+            } else if (
+                suffixRadioButton.isSelected() &&
+                prefixSuffixDescendingRadioButton.isSelected()
+            ) {
+                return FileUtilities.numberAppendDesc(
+                    fileNumberInputStringTextField.getText(),
+                    Integer.parseInt(fileNumberStartNumberTextField.getText()),
+                    filePaths
+                );
+            }
         }
         throw new RuntimeException("Impossible file combination was run.");
     }
 
-    private File getCurrentFile() {
-        return new File(RenamerUI.class.getProtectionDomain().getCodeSource().getLocation().getPath());
-    }
-
-    private List<String> getFilePathList() {
-        List<String> filePaths = new ArrayList<>();
-        for (File iFile : currentFiles)
-            filePaths.add(iFile.getAbsolutePath());
-
-        return filePaths;
+    private Stream<String> getFilePathList() {
+        return currentFiles.stream().map(File::getAbsolutePath);
     }
 
     private static void eraseTable(javax.swing.JTable table) {
@@ -495,6 +567,7 @@ public final class RenamerUI extends javax.swing.JFrame
     private javax.swing.JRadioButton prefixSuffixAscendingRadioButton;
     private javax.swing.ButtonGroup prefixSuffixButtonGroup;
     private javax.swing.JRadioButton prefixSuffixDescendingRadioButton;
+    private javax.swing.ButtonGroup prefixSuffixNumberButtonGroup;
     private javax.swing.JCheckBox prefixSuffixNumberCheckBox;
     private javax.swing.JButton previewButton;
     private javax.swing.JTable previewFileTable;
